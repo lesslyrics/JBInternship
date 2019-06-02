@@ -1,0 +1,81 @@
+h2 {
+    font-size: 1em;
+    font-weight: 100%;
+    text-align: center;
+    display: block;
+    line-height: 1em;
+    padding-bottom: 2em;
+    background-color: #51ff68;
+    color: #7dffc2;
+}
+
+br {
+    display: block;
+    margin: 5px 0;
+}
+
+h2 {
+    display: block;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+body {
+
+    font-family: 'Nunito', sans-serif;
+    font-size: large;
+    font-weight: bold;
+
+    line-height: 2em;
+    color: #540603;
+    background-size: 100%;
+
+}
+
+button {
+    border-radius: 10px;
+    height: 45px;
+    width: 150px;
+    text-align: center;
+    background-color: #460a20;
+    font-size: 15px;
+    color: #ff6657;
+}
+
+input {
+    height: 35px;
+    font-size: 15px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 100%;
+    line-height: 2em;
+    color: #f7c6c5;
+    background: #A7A1AE;
+    padding: 20px;
+
+
+}
+
+th, td {
+    text-align: left;
+    padding: 15px;
+    font-size: 20px;
+    color: #fffafe;
+    border: 5px groove #ccc /* Граница между ячейками */
+}
+
+th {
+    text-align: center;
+    background-color: #261941;
+    color: #fffdfe;
+    font-style: bold;
+    font-size: 35px;
+}
+
+a {
+    color: #4332ff;
+}

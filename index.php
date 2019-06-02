@@ -1,154 +1,300 @@
-<?php
-# php_arXiv_parsing_example.php
-#
-# This sample script illustrates a basic arXiv api call
-# followed by parsing of the results using the Simplepie
-# module.
-#
-# Please see the documentation at
-# http://export.arxiv.org/api_help/docs/user-manual.html
-# for more information, or email the arXiv api
-# mailing list at arxiv-api@googlegroups.com.
-#
-# Simplepie can be gotten from http://simplepie.org/
-#
-# Author: Julius B. Lucks, Bill Flanagan
-#
-# This is free software.  Feel free to do what you want
-# with it, but please play nice with the arXiv API!
-include_once('simplepie-1.5/autoloader.php');
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Intro</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-define('EOL', "<br />\n");
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0"/>
+    <meta name="author" content="Juan Jos&eacute; Garc&iacute; Ripoll">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="copyright" content
+    <meta name="keywords" content="science, articles, preprints, physics, mathematics, computer science, arxiv">
+    <meta name="robots" content="index">
 
-# Base api query url
-$base_url = 'http://export.arxiv.org/api/query?';
 
-# Search parameters
-$search_query = (isset($_GET['query']) ? $_GET['query'] : 'all'); # search for electron in all fields
-$start = (isset($_GET['start']) ? $_GET['start'] : 0);
-$max_results = (isset($_GET["max_results"]) ? $_GET["max_results"] : 5);
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular-cookies.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.2.8/angular-ui-router.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+            integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+            crossorigin="anonymous"></script>
 
-# Construct the query with the search parameters
-$query = "search_query=" . $search_query . "&start=" . $start . "&max_results=" . $max_results;
+    <style type="text/css">
+        .form-style-6 {
+            font: 95% Arial, Helvetica, sans-serif;
+            max-width: 400px;
+            margin: 10px auto;
+            padding: 16px;
+            background: #f7f6f5;
 
-# SimplePie will automatically sort the entries by date
-# unless we explicitly turn this off
-$feed = new SimplePie();
-$feed->set_feed_url($base_url . $query);
-$feed->set_cache_location($_SERVER['DOCUMENT_ROOT'] . '/simplepie_cache');
-$feed->set_cache_duration(36000);
-$feed->enable_order_by_date(false);
-$feed->init();
-$feed->handle_content_type();
-
-if ($feed->error()) {
-    echo $feed->error();
-}
-
-# Use these namespaces to retrieve tags
-$atom_ns = 'http://www.w3.org/2005/Atom';
-$opensearch_ns = 'http://a9.com/-/spec/opensearch/1.1/';
-$arxiv_ns = 'http://arxiv.org/schemas/atom';
-
-# print out feed information
-print("<b>Print out feed information</b>" . EOL);
-print("Feed title: " . $feed->get_title() . EOL);
-$last_updated = $feed->get_feed_tags($atom_ns, 'updated');
-print("Last Updated: " . $last_updated[0]['data'] . EOL . EOL);
-
-# opensearch metadata such as totalResults, startIndex,
-# and itemsPerPage live in the opensearch namespase
-print("<b>Opensearch metadata such as totalResults, startIndex, and itemsPerPage live in the opensearch namespase</b>" . EOL);
-$totalResults = $feed->get_feed_tags($opensearch_ns, 'totalResults');
-print("totalResults for this query: " . $totalResults[0]['data'] . EOL);
-
-$startIndex = $feed->get_feed_tags($opensearch_ns, 'startIndex');
-print("startIndex for these results: " . $startIndex[0]['data'] . EOL);
-
-$itemsPerPage = $feed->get_feed_tags($opensearch_ns, 'itemsPerPage');
-print("itemsPerPage for these results: " . $itemsPerPage[0]['data'] . EOL . EOL);
-
-# Run through each entry, and print out information
-# some entry metadata lives in the arXiv namespace
-print("<b>Run through each entry, and print out information some entry metadata lives in the arXiv namespace</b>" . EOL);
-
-$i = 1;
-foreach ($feed->get_items() as $entry) {
-    print("<b>Entry " . $i++ . "</b>" . EOL);
-    print("e-print metadata" . EOL);
-
-    $temp = explode('/abs/', $entry->get_id());
-    print("arxiv-id: " . $temp[1] . EOL);
-    print("Title: " . $entry->get_title() . EOL);
-
-    $published = $entry->get_item_tags($atom_ns, 'published');
-    print("Published: " . $published[0]['data'] . EOL);
-
-    # gather a list of authors and affiliation
-    #  This is a little complicated due to the fact that the author
-    #  affiliations are in the arxiv namespace (if present)
-    # Manually getting author information using get_item_tags
-    $authors = array();
-    foreach ($entry->get_item_tags($atom_ns, 'author') as $author) {
-        $name = $author['child'][$atom_ns]['name'][0]['data'];
-        $affils = array();
-
-        /*
-        # If affiliations are present, grab them
-        if ($author['child'][$arxiv_ns]['affiliation']) {
-            foreach ($author['child'][$arxiv_ns]['affiliation'] as $affil) {
-                array_push($affils, $affil['data']);
-            }
-            if ($affils) {
-                $affil_string = join(', ', $affils);
-                $name = $name . " (" . $affil_string . ")";
-            }
-        }*/
-        array_push($authors, '    ' . $name . EOL);
-    }
-    $author_string = join('', $authors);
-    print("Authors: " . EOL . $author_string . EOL);
-    # get the links to the abs page and pdf for this e-print
-    foreach ($entry->get_item_tags($atom_ns, 'link') as $link) {
-        if ($link['attribs']['']['rel'] == 'alternate') {
-            print("abs page link: " . $link['attribs']['']['href'] . EOL);
-        } elseif ($link['attribs']['']['title'] == 'pdf') {
-            print("pdf link: " . $link['attribs']['']['href'] . EOL);
         }
-    }
 
-    # The journal reference, comments and primary_category sections live under
-    # the arxiv namespace
-    $journal_ref_raw = $entry->get_item_tags($arxiv_ns, 'journal_ref');
-    if ($journal_ref_raw) {
-        $journal_ref = $journal_ref_raw[0]['data'];
-    } else {
-        $journal_ref = 'No journal ref found';
-    }
-    print("Journal Reference: " . $journal_ref . EOL);
+        .form-style-6 h1 {
+            background: #413c7f;
+            padding: 20px 0;
+            font-size: 140%;
+            font-weight: 300;
+            text-align: center;
+            color: #fff5ff;
+            margin: -16px -16px 16px -16px;
 
-    $comments_raw = $entry->get_item_tags($arxiv_ns, 'comment');
-    if ($comments_raw) {
-        $comments = $comments_raw[0]['data'];
-    } else {
-        $comments = 'No journal ref found';
-    }
-    print("Comments: " . $comments . EOL);
 
-    $primary_category_raw = $entry->get_item_tags($arxiv_ns,
-        'primary_category');
-    $primary_category = $primary_category_raw[0]['attribs']['']['term'];
-    print("Primary Category: " . $primary_category . EOL);
+        }
 
-    # Lets get all the categories
-    $categories = array();
-    foreach ($entry->get_categories() as $category) {
-        array_push($categories, $category->get_label());
-    }
-    $categories_string = join(', ', $categories);
-    print("All Categories: " . $categories_string . EOL);
+        .form-style-6 input[type="text"],
+        .form-style-6 input[type="date"],
+        .form-style-6 input[type="datetime"],
+        .form-style-6 input[type="email"],
+        .form-style-6 input[type="number"],
+        .form-style-6 input[type="search"],
+        .form-style-6 input[type="time"],
+        .form-style-6 input[type="url"],
+        .form-style-6 textarea,
+        .form-style-6 select {
+            -webkit-transition: all 0.30s ease-in-out;
+            -moz-transition: all 0.30s ease-in-out;
+            -ms-transition: all 0.30s ease-in-out;
+            -o-transition: all 0.30s ease-in-out;
+            outline: none;
+            box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            width: 100%;
+            background: #f4fff5;
+            margin-bottom: 4%;
+            border: 1px solid #ccc;
+            padding: 3%;
+            color: #555;
+            font: 95% Arial, Helvetica, sans-serif;
+        }
 
-    # The abstract is in the <summary> element
-    print("Abstract: " . $entry->get_description() . EOL . EOL);
-}
-?>
+        .form-style-6 input[type="text"]:focus,
+        .form-style-6 input[type="date"]:focus,
+        .form-style-6 input[type="datetime"]:focus,
+        .form-style-6 input[type="email"]:focus,
+        .form-style-6 input[type="number"]:focus,
+        .form-style-6 input[type="search"]:focus,
+        .form-style-6 input[type="time"]:focus,
+        .form-style-6 input[type="url"]:focus,
+        .form-style-6 textarea:focus,
+        .form-style-6 select:focus {
+            box-shadow: 0 0 5px #3342d1;
+            padding: 3%;
+            border: 1px solid #2e2dd1;
+
+        }
+
+        .form-style-6 input[type="submit"],
+        .form-style-6 input[type="button"] {
+            box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            width: 100%;
+            padding: 3%;
+            background: #3f38ca;
+            border-bottom: 2px solid #392ac2;
+            border-top-style: none;
+            border-right-style: none;
+            border-left-style: none;
+            color: #fafffb;
+
+        }
+
+        .form-style-6 input[type="submit"]:hover,
+        .form-style-6 input[type="button"]:hover {
+            background: #2a2058;
+
+        }
+
+        body {
+            background-size: 100%;
+            margin-top: 15%;
+        }
+    </style>
+
+
+</head>
+
+
+<body>
+<div></div>
+<div class="form-style-6">
+    <h1>What articles are you interested in?</h1>
+
+    <form method="GET" action="query.php?{query}&{max_results}{start}">
+
+
+        <label for="country"></label>
+
+        <select id="query" name="query" placeholder="What are  you looking for">
+            <option value="cat:astro-ph*">Astrophysics</option>
+            <option value="cat:astro-ph.CO">Cosmology and Extragalactic Astrophysics</option>
+            <option value="cat:astro-ph.EP">Earth and Planetary Astrophysics</option>
+            <option value="cat:astro-ph.GA">Galaxy Astrophysics</option>
+            <option value="cat:astro-ph.HE">High Energy Astrophysical Phenomena</option>
+            <option value="cat:astro-ph.IM">Instrumentation and Methods for Astrophysics</option>
+            <option value="cat:astro-ph.SR">Solar and Stella Astrophysics</option>
+            <option value="cat:cond-mat*">Condensed Matter Physics</option>
+            <option value="cat:cond-mat.dis-nn">Disordered Systems and Neural Networks</option>
+            <option value="cat:cond-mat.mtrl-sci">Materials Science</option>
+            <option value="cat:cond-mat.mes-hall">Mesoscale and Nanoscale Physics</option>
+            <option value="cat:cond-mat.other">Other Condensed Matter</option>
+            <option value="cat:cond-mat.quant-gas">Quantum Gases</option>
+            <option value="cat:soft">Soft Condensed Matter</option>
+            <option value="cat:cond-mat.stat-mech">Statistical Mechanics</option>
+            <option value="cat:cond-mat.str-el">Strongly Correlated Electrons</option>
+            <option value="cat:cond-mat.supr-con">Superconductivity</option>
+            <option value="cat:gr-qc">General Relativity and Quantum Cosmology</option>
+            <option value="cat:hep-ex">High Energy Physics - Experiment</option>
+            <option value="cat:hep-lat">High Energy Physics - Lattice</option>
+            <option value="cat:hep-ph">High Energy Physics - Phenomenology</option>
+            <option value="cat:hep-th">High Energy Physics - Theory</option>
+            <option value="cat:math-ph">Mathematical Physics</option>
+            <option value="cat:nucl-ex">Nuclear Experiment</option>
+            <option value="cat:nucl-th">Nuclear Theory</option>
+            <option value="cat:physics*">Physics</option>
+            <option value="cat:physics.acc-ph">Accelerator Physics</option>
+            <option value="cat:physics.ao-ph">Atmospheric and Oceanic Physics</option>
+            <option value="cat:physics.atom-ph">Atomic Physics</option>
+            <option value="cat:physics.atm-clus">Atomic and Molecular Clusters</option>
+            <option value="cat:physics.bio-ph">Biological Physics</option>
+            <option value="cat:physics.chem-ph">Chemical Physics</option>
+            <option value="cat:physics.class-ph">Classical Physics</option>
+            <option value="cat:physics.comp-ph">Computational Physics</option>
+            <option value="cat:physics.data-an">Data Analysis Statistics and Probability</option>
+            <option value="cat:physics.flu-dyn">Fluid Dynamics</option>
+            <option value="cat:physics.gen-ph">General Physics</option>
+            <option value="cat:physics.geo-ph">Geophysics</option>
+            <option value="cat:physics.hist-ph">History and Philosophy of Physics</option>
+            <option value="cat:physics.ins-det">Instrumentation and Detectors</option>
+            <option value="cat:physics.med-ph">Medical Physics</option>
+            <option value="cat:physics.optics">Optics</option>
+            <option value="cat:physics.ed-ph">Physics Education</option>
+            <option value="cat:physics.soc-ph">Physics and Society</option>
+            <option value="cat:physics.plasma-ph">Plasma Physics</option>
+            <option value="cat:physics.pop-ph">Popular Physics</option>
+            <option value="cat:physics.space-ph">Space Physics</option>
+            <option value="cat:quant-ph">Quantum Physics</option>
+            <option value="cat:math*">Mathematics</option>
+            <option value="cat:math.AG">Algebraic Geometry</option>
+            <option value="cat:math.AT">Algebraic Topology</option>
+            <option value="cat:math.AP">Analysis of PDEs</option>
+            <option value="cat:math.CT">Category Theory</option>
+            <option value="cat:math.CA">Classical Analysis and ODEs</option>
+            <option value="cat:math.CO">Combinatorics</option>
+            <option value="cat:math.AC">Commutative Algebra</option>
+            <option value="cat:math.CV">Complex Variables</option>
+            <option value="cat:math.DG">Differential Geometry</option>
+            <option value="cat:math.DS">Dynamical Systems</option>
+            <option value="cat:math.FA">Functional Analysis</option>
+            <option value="cat:math.GM">General Mathematics</option>
+            <option value="cat:math.GN">General Topology</option>
+            <option value="cat:math.GT">Geometric Topology</option>
+            <option value="cat:math.GR">Group Theory</option>
+            <option value="cat:math.HO">History and Overview</option>
+            <option value="cat:math.IT">Information Theory</option>
+            <option value="cat:math.KT">K-Theory and Homology</option>
+            <option value="cat:math.LO">Logic</option>
+            <option value="cat:math.MP">Mathematical Physics</option>
+            <option value="cat:math.MG">Metric Geometry</option>
+            <option value="cat:math.NT">Number Theory</option>
+            <option value="cat:math.NA">Numerical Analysis</option>
+            <option value="cat:math.OA">Operator Algebras</option>
+            <option value="cat:math.OC">Optimization and Control</option>
+            <option value="cat:math.PR">Probability</option>
+            <option value="cat:math.QA">Quantum Algebra</option>
+            <option value="cat:math.RT">Representation Theory</option>
+            <option value="cat:math.RA">Rings and Algebras</option>
+            <option value="cat:math.SP">Spectral Theory</option>
+            <option value="cat:math.ST">Statistics Theory</option>
+            <option value="cat:math.SG">Symplectic Geometry</option>
+            <option value="cat:nlin*">Nonlinear Sciences</option>
+            <option value="cat:nlin.AO">Adaptation and Self-Organizing Systems</option>
+            <option value="cat:nlin.CG">Cellular Automata and Lattice Gases</option>
+            <option value="cat:nlin.CD">Chaotic Dynamics</option>
+            <option value="cat:nlin.SI">Exactly Solvable and Integrable Systems</option>
+            <option value="cat:nlin.PS">Pattern Formation and Solitons</option>
+            <option value="cat:cs*">Computer Research Repository</option>
+            <option value="cat:cs.AI">Artificial Intelligence</option>
+            <option value="cat:cs.CL">Computation and Language</option>
+            <option value="cat:cs.CC">Computation Complexity</option>
+            <option value="cat:cs.CE">Computation Engineering Finance and Science</option>
+            <option value="cat:cs.CG">Computational Geometry</option>
+            <option value="cat:cs.GT">Computer Science and Game Theory</option>
+            <option value="cat:cs.CV">Computer Vision and Pattern Recognition</option>
+            <option value="cat:cs.CY">Computers and Society</option>
+            <option value="cat:cs.CR">Cryptography and Security</option>
+            <option value="cat:cs.DS">Data Structures and Algorithms</option>
+            <option value="cat:cs.DB">Databases</option>
+            <option value="cat:cs.DL">Digital Libraries</option>
+            <option value="cat:cs.DM">Discrete Mathematics</option>
+            <option value="cat:cs.DC">Distributed Parallel and Cluster Computing</option>
+            <option value="cat:cs.ET">Emerging Technologies</option>
+            <option value="cat:cs.FL">Formal Languages and Automata Theory</option>
+            <option value="cat:cs.GL">General Literature</option>
+            <option value="cat:cs.GR">Graphics</option>
+            <option value="cat:cs.AR">Hardware Architecture</option>
+            <option value="cat:cs.HC">Human-Computer Interaction</option>
+            <option value="cat:cs.IR">Information Retrieval</option>
+            <option value="cat:cs.LG">Learning</option>
+            <option value="cat:cs.LO">Logic in Computer Science</option>
+            <option value="cat:cs.MS">Mathematical Software</option>
+            <option value="cat:cs.MA">Multiagent Systems</option>
+            <option value="cat:cs.MM">Multimedia</option>
+            <option value="cat:cs.NI">Networking and Internet Architecture</option>
+            <option value="cat:cs.NE">Neural and Evolutionary Computing</option>
+            <option value="cat:cs.NA">Numerical Analysis</option>
+            <option value="cat:cs.OS">Operating System</option>
+            <option value="cat:cs.OH">Other Computer Science</option>
+            <option value="cat:cs.PF">Performance</option>
+            <option value="cat:cs.PL">Programming Languages</option>
+            <option value="cat:cs.RO">Robotics</option>
+            <option value="cat:cs.SI">Social and Information Networks</option>
+            <option value="cat:cs.SE">Software Engineering</option>
+            <option value="cat:cs.SD">Sound</option>
+            <option value="cat:cs.SC">Symbolic Computation</option>
+            <option value="cat:cs.SY">Systems and Control</option>
+            <option value="cat:q-bio*">Quantitative Biology</option>
+            <option value="cat:q-bio.BM">Biomolecules</option>
+            <option value="cat:q-bio.CB">Cell Behavior</option>
+            <option value="cat:q-bio.GN">Genomics</option>
+            <option value="cat:q-bio.MN">Molecular Networks</option>
+            <option value="cat:q-bio.NC">Neurons and Cognition</option>
+            <option value="cat:q-bio.OT">Other Quatitative Biology</option>
+            <option value="cat:q-bio.PE">Populations and Evolution</option>
+            <option value="cat:q-bio.QM">Quantitative Methods</option>
+            <option value="cat:q-bio.SC">Subcellular Processes</option>
+            <option value="cat:q-bio.TO">Tissues and Organs</option>
+            <option value="cat:q-fin*">Quantitative Finance</option>
+            <option value="cat:q-fin.CP">Computational Finance</option>
+            <option value="cat:q-fin.GN">General Finance</option>
+            <option value="cat:q-fin.PM">Portfolio Management</option>
+            <option value="cat:q-fin.PR">Pricing of Securities</option>
+            <option value="cat:q-fin.RM">Risk Management</option>
+            <option value="cat:q-fin.ST">Statistical Finance</option>
+            <option value="cat:q-fin.TR">Trading and Market Microstructure</option>
+            <option value="cat:stat*">Statistics</option>
+            <option value="cat:stat.AP">Applications</option>
+            <option value="cat:stat.CO">Computation</option>
+            <option value="cat:stat.ML">Machine Learning</option>
+            <option value="cat:stat.ME">Methodology</option>
+            <option value="cat:stat.OT">Other Statistics</option>
+            <option value="cat:stat.TH">Statistics Theory</option>
+        </select>
+
+
+        <input type="text" name="max_results" placeholder="Number of results to display"/>
+        <input type="text" name="start" placeholder="Starting from"/>
+
+        <input type="submit" value="Find"/>
+    </form>
+</div>
+
+
+</body>
+</html>
