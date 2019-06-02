@@ -2,6 +2,7 @@
 ## Publication Analysis
 Web application created in PHP  
 Feed parsing is done with SimplePie https://simplepie.org/
+
 Задачи:  
 * Изучить API arxiv  
 * Сделать небольшой веб сервис  
