@@ -55,15 +55,16 @@ $base_url = 'http://export.arxiv.org/api/query?';
 # Search parameters
 $search_query = (isset($_GET['query']) ? $_GET['query'] : 'all'); // search
 $start = ((isset($_GET['start'])  &&  $_GET['start']) ? $_GET['start'] : 0); //first article to be shown, default: 1
-if (isset($_GET['max_results'])) {  // restriction of total articles: no more than 10 000. Default: 10
+if (isset($_GET['max_results'])) {
+    // restriction of total articles: no more than 10 000. Default: 10
     if ($_GET['max_results'] <= 10000) {
         $max_results = $_GET['max_results'];
     } else {
         $max_results = 10000;
     }
+} else {
     $max_results = 10;
 }
-
 
 $query = "search_query=" . $search_query . "&start=" . $start . "&max_results=" . $max_results;
 
